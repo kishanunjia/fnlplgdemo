@@ -186,3 +186,334 @@ function plugin_republic_order_item_name( $product_name, $item ) {
 }
 
 add_filter( 'woocommerce_order_item_name', 'plugin_republic_order_item_name', 10, 2 );
+
+
+//Ajax Function Here....
+
+add_action('wp_footer', 'eps_footer');
+
+function eps_footer() {
+    
+    echo "<script>var ajax_request_url = '".admin_url( 'admin-ajax.php' )."'</script>";
+
+}
+
+
+add_action( 'wp_ajax_nopriv_favourite_unfavourite_call', 'favourite_unfavourite_call_function' );
+add_action('wp_ajax_favourite_unfavourite_call', 'favourite_unfavourite_call_function');
+function favourite_unfavourite_call_function(){
+    global $wpdb;
+    $reponse = array();
+    $res='Yes';
+    $user_id=$_POST['user_id'];
+    $fav_user_id=$_POST['fav_user_id'];
+    $fav_post_id=$_POST['fav_post_id'];
+    $fav_user_type=$_POST['fav_user_type'];
+    
+    
+    if(!empty($user_id) && !empty($fav_post_id))
+    {
+
+     $table_name = $wpdb->prefix.'favorite_list';
+      $list = $wpdb->get_results("SELECT * FROM $table_name WHERE user_id = ".$user_id." AND fav_post_id=".$fav_post_id."");
+      if(empty($list))
+      {
+        $wpdb->insert( $wpdb->prefix . 'favorite_list', 
+            array( 
+                'user_id'          => $user_id,
+                'fav_user_id'      => $fav_user_id,
+                'fav_post_id'      => $fav_post_id,             
+                'fav_user_type'    => $fav_user_type,               
+            )
+        );
+        
+        $lastid = $wpdb->insert_id;   
+        if($lastid)
+        {           
+          $response['response'] = add_successfully_favourite;
+          $response['msg'] = Remove_to_Favorite;
+          $response['action'] = 'add';
+        }
+      }
+      else
+      {
+        $wpdb->delete( $table_name, array( 'user_id' => $user_id,'fav_post_id' => $fav_post_id ));                      
+        $response['response'] = remove_successfully_favourite;
+        $response['msg'] = Add_to_Favorite;
+        $response['action'] = 'del';          
+      }
+    }
+    else
+    {
+      $response['response'] = "N";
+      $response['msg'] = report_claim_user_not_found_msg;   
+    }
+    
+    
+
+    
+    header( "Content-Type: application/json" );
+    echo json_encode($response);    
+    exit();
+}
+
+function club_blog_pagination_function(){
+    global $wpdb;
+
+    $reponse = array();
+    if(!empty($_POST['page_number']) && !empty($_POST['logic_id'])){        
+    $res='';
+    $pagination='';  
+    $page_number = $_POST['page_number'];
+    $logic_id = $_POST['logic_id'];
+    //$res.=$page_number;       
+    wp_reset_query();
+    global $wp_query; 
+         
+   $paged = $page_number;
+   $args = array(    
+        'orderby'       =>  'date',
+        'order'         =>  'DESC',
+        //'posts_per_page' => 2,
+        'post_type'     => 'blogs',
+        'meta_query'    => array( array( 'key' => 'link_club', 'value' => $logic_id)),
+        'paged'         => $paged
+    );
+    $wp_query = new WP_Query($args);
+    //query_posts($args);
+    if($wp_query->have_posts())
+    {     
+        while($wp_query->have_posts()){  
+         $wp_query->the_post();
+         $id=get_the_ID();
+         $img_src = get_template_directory_uri().'/images/no-image.png';
+         $image_attributes = wp_get_attachment_image_src( get_post_thumbnail_id(get_the_ID()), 'main-size' );
+         if(!empty($image_attributes))
+         {
+            $img_src = $image_attributes[0];
+         }
+         
+          $res.='<div class="blog-list-main">';
+          
+          $res.='<div class="blogimg"><div class="blog-img-section">';
+          $res.='<a class="open-popup-link" href="#blog-popup-'.get_the_ID().'"><img src="'.$img_src.'" alt="'.get_the_title().'" /></a>';
+          $res.='</div></div>';
+          
+          $res.='<div class="blog-inner-content">';
+          $res.='<h3><a class="open-popup-link" href="#blog-popup-'.get_the_ID().'">'.get_the_title().'</a></h3>';
+          $res.='<div class="post-date"><i class="fa fa-calendar"></i>'.get_the_time("j F, Y").'</div>';
+          $res.='<div class="blog-content"><p>'.wp_trim_words( get_the_content(), 60, "..." ).'</p></div>';
+          $res.='<a class="readmorelink open-popup-link" href="#blog-popup-'.get_the_ID().'">'.Club_Blog_Read_more_button_Label.'</a>';
+          $res.='</div>';                         
+          $res.='</div>';
+         
+         $post = get_post(get_the_ID()); 
+         $content = $post->post_content;
+         $content = apply_filters('the_content', $content); 
+         $image_attributes = wp_get_attachment_image_src( get_post_thumbnail_id(get_the_ID()), 'full' ); 
+         if(!empty($image_attributes))
+         {
+            $img_src = $image_attributes[0];
+         }        
+        $res.='<div id="blog-popup-'.get_the_ID().'" class="white-popup mfp-hide">
+        <div class="gc-club-blog-popup">';
+          if(!empty($image_attributes)){
+          $res.='<div class="blogimg">
+            <div class="blog-img-section">
+              <img src="'.$img_src.'" alt="'.get_the_title().'">
+            </div>
+          </div>';
+          }
+          $res.='<div class="blog-inner-content">
+            <h3>'.get_the_title().'</h3>
+            <div class="post-date"><i class="fa fa-calendar"></i>'.get_the_time('j F, Y').'</div>
+            <div class="blog-content">'.$content.'</div>
+          </div>                                    
+        </div>
+        </div>';         
+          
+         
+         
+        }
+        
+        $res.='<div class="pagination pagination-div">';
+        
+$res.='<div class="pagination-loading"><img src="'.get_template_directory_uri().'/images/loading.gif" alt="Loading image" /></div>';                                               
+        $big = 999999999; // need an unlikely integer       
+        $res.=paginate_links( array(
+                                            //'base' => str_replace( $big, '%#%', esc_url( get_pagenum_link( $big ) ) ),
+                                            'base' => 'javascript:void(0);',
+                                            'format' => '?paged=%#%',
+                                            'current' => max( 1, $page_number),
+                                            'total' => $wp_query->max_num_pages
+                                        ) );
+                                        
+        $res.='</div>';
+        
+        
+        
+    }
+
+$res.="
+<script>
+jQuery(document).ready(function(e) {
+    jQuery('.page-numbers').click(function(e){
+        e.preventDefault();
+        if(jQuery(this).hasClass('next'))
+        {
+            var page_number = parseInt(jQuery('.pagination-div .current').html())+1;
+        }
+        else if(jQuery(this).hasClass('prev'))
+        {
+            var page_number = parseInt(jQuery('.pagination-div .current').html())-1;
+        }       
+        else
+        {
+          var page_number = jQuery(this).html();
+        }
+        var logic_id = ".$logic_id.";
+        
+        jQuery('.pagination-loading').show();       
+        jQuery.ajax({
+            type: 'POST',
+            url: ajax_request_url,
+            data: { action: 'club_blog_pagination' , page_number: page_number,logic_id:logic_id}
+          }).done(function(msg){                     
+                 if(msg.response != 'N')
+                 {
+                   
+                   jQuery('.club-blog-ajax-call').html(msg.response);
+                 }
+                 else
+                 {
+                   alert('Problem in Loading Blogs');    
+                 }
+          });       
+        
+    });    
+});
+jQuery('a.open-popup-link').magnificPopup({
+  mainClass: 'mfp-with-fade',
+  removalDelay: 500,
+  callbacks: {
+    beforeClose: function() {
+        this.content.addClass('hinge');
+    }, 
+    close: function() {
+        this.content.removeClass('hinge'); 
+    }
+  },
+  midClick: true
+});
+</script>
+";           
+    wp_reset_query();    
+         
+         $response['response'] = $res;
+    } else {
+         $response['response'] = "N";
+    }
+
+    header( "Content-Type: application/json" );
+    echo json_encode($response);
+
+    //Don't forget to always exit in the ajax function.
+    exit();
+
+}
+
+
+
+?>
+
+<script>
+    jQuery('.removefav').click(function(){
+        var user_id     = jQuery(this).attr('user_id');
+        var fav_post_id = jQuery(this).attr('fav_post_id');
+        if(confirm("<?php echo remove_favourite_sure_msg; ?>"))
+        {
+        jQuery.ajax({
+            type: "POST",
+            url: ajax_request_url,
+            data: { action: 'favourite_unfavourite_call' , user_id: user_id,'fav_user_id':'',fav_post_id:fav_post_id,'fav_user_type':''}
+        }).done(function(res){                   
+             if(res.response != 'N')
+             {                         
+                if(res.action != 'add'){                  
+                  //window.location.href=window.location.href;  
+                  jQuery('.gc-fav'+fav_post_id).remove();
+                }                              
+             }
+             else
+             {         
+               alert(res.msg);
+             }
+                             
+        });
+                
+        }
+        
+    });
+
+
+jQuery(document).ready(function(e) {
+    jQuery('.page-numbers').click(function(e){
+        e.preventDefault();
+        
+        if(jQuery(this).hasClass('next'))
+        {
+            var page_number = parseInt(jQuery('.pagination-div .current').html())+1;
+        }
+        else if(jQuery(this).hasClass('prev'))
+        {
+            var page_number = parseInt(jQuery('.pagination-div .current').html())-1;
+        }       
+        else
+        {
+          var page_number = jQuery(this).html();
+        }
+        if(!jQuery(this).hasClass('current')){
+            var logic_id = <?php echo get_the_ID(); ?>;     
+            jQuery('.pagination-loading').show();
+            jQuery.ajax({
+                type: "POST",
+                url: ajax_request_url,
+                data: { action: 'club_blog_pagination' , page_number: page_number,logic_id:logic_id}
+              }).done(function(msg){                     
+                     if(msg.response != 'N')
+                     {                 
+                       jQuery('.club-blog-ajax-call').html(msg.response);
+                     }
+                     else
+                     {
+                       alert('Problem in Loading Blogs');    
+                     }
+              });       
+        }
+    });    
+});
+
+
+</script>    
+
+
+
+$products = new WP_Query( array( 
+  'post_type' => 'products',
+  'posts_per_page' => 15,
+  'orderby' => 'title',
+  'order'   => 'ASC',
+  'paged' => $paged,
+  'tax_query' => array(
+    'relation' => 'OR',
+     array(
+       'taxonomy' => 'producttype',
+       'field' => 'name',
+       'terms' => $producttype
+     ),
+     array(
+       'taxonomy' => 'businessunit',
+       'field' => 'name',
+       'terms' => $businessunit
+     )
+);
