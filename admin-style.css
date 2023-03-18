@@ -1,0 +1,27 @@
+.expiring-add-title{
+	display: flex;
+    align-items: center;
+}
+.expiring-add-title .add-new-h2{
+	top:0px !important;
+	margin-left: 20px !important;
+}
+.expiring-frm-input{
+	width: 95%;
+	max-width: 300px !important;
+}
+#expiring_form_meta_box{
+	max-width: 800px !important;
+}
+.add-expiring-main{
+	max-width: 800px;
+}
+.expired-label{
+	color:#ff0000;
+}
+.active-label{
+	color:#00ff00;
+}
+
+.text-area-cls{ width:400px; height: 100px;  }
+.input-area-cls{ width:400px;  }
